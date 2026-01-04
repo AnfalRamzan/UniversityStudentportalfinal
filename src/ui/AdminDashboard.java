@@ -1,14 +1,9 @@
 package ui;
 
-import dao.StudentDAO;
-import dao.CourseDAO;
-import dao.AttendanceDAO;
-import dao.GradesDAO;
-import models.Student;
-import models.Course;
-import models.Attendance;
-import models.Grade;
-
+import dao.*;
+import db.DBConnection;
+import models.*;
+import java.sql.*;   
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -26,105 +21,111 @@ public class AdminDashboard extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(245, 247, 250)); // Light professional background
 
-        // ---------------- TOP PANEL ----------------
+        // ================= TOP PANEL =================
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(Color.WHITE);
+        topPanel.setBackground(new Color(230, 233, 240));
 
-        // Centered title
         JLabel lblTitle = new JLabel("ADMIN DASHBOARD", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Arial", Font.BOLD, 22));
-        lblTitle.setForeground(Color.BLACK);
-        lblTitle.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        lblTitle.setForeground(new Color(50, 50, 50));
 
-        // Logout button on top-right
-        JButton btnLogout = new JButton("Logout");
-        btnLogout.setFont(new Font("Arial", Font.BOLD, 14));
-        btnLogout.setForeground(Color.BLACK);
-        btnLogout.addActionListener(e -> logout());
+        // Logo
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("/images/riphah.png"));
+            Image img = icon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+            JLabel logo = new JLabel(new ImageIcon(img));
+            logo.setHorizontalAlignment(SwingConstants.CENTER);
+            topPanel.add(logo, BorderLayout.WEST);
+        } catch (Exception e) {
+            System.out.println("Logo not found: " + e.getMessage());
+        }
 
-        // Title panel to ensure center alignment
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setBackground(Color.WHITE);
-        titlePanel.add(lblTitle, BorderLayout.CENTER);
-
-        topPanel.add(titlePanel, BorderLayout.CENTER);
-        topPanel.add(btnLogout, BorderLayout.EAST);
-
+        topPanel.add(lblTitle, BorderLayout.CENTER);
         add(topPanel, BorderLayout.NORTH);
 
-        // ---------------- TABS ----------------
+        // ================= TABS =================
         JTabbedPane tabs = new JTabbedPane();
+        tabs.setBackground(new Color(245, 247, 250));
+        tabs.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        // ================= STUDENT MANAGEMENT TAB =================
+        // ================= STUDENTS TAB =================
         studentModel = new DefaultTableModel(
-                new String[]{"ID", "Name", "Email", "Course", "Fees Due"}, 0
-        ) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
+                new String[]{"ID", "Name", "Email", "Course", "Fees Due"}, 0);
         studentTable = new JTable(studentModel);
+        studentTable.setFillsViewportHeight(true);
+        studentTable.setBackground(Color.WHITE);
 
         JPanel studentPanel = new JPanel(new BorderLayout());
-        studentPanel.setBackground(Color.WHITE);
-
+        studentPanel.setBackground(new Color(245, 247, 250));
         studentPanel.add(createLeftActionPanel(), BorderLayout.WEST);
         studentPanel.add(new JScrollPane(studentTable), BorderLayout.CENTER);
-
         tabs.add("Students", studentPanel);
 
-        // ================= STUDENTS OVERVIEW TAB =================
+        // ================= OVERVIEW TAB =================
         overviewModel = new DefaultTableModel(
-                new String[]{"ID", "Name", "Email", "Course", "Fees Due", "Attendance Date", "Status"}, 0
-        ) {
-            @Override
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
+                new String[]{"ID", "Name", "Email", "Course", "Fees", "Date", "Status"}, 0);
         overviewTable = new JTable(overviewModel);
-
-        JPanel overviewPanel = new JPanel(new BorderLayout());
-        overviewPanel.setBackground(Color.WHITE);
+        overviewTable.setFillsViewportHeight(true);
+        overviewTable.setBackground(Color.WHITE);
 
         JButton btnRefreshOverview = new JButton("Refresh Overview");
-        btnRefreshOverview.setFont(new Font("Arial", Font.BOLD, 14));
-        btnRefreshOverview.setForeground(Color.BLACK);
+        btnRefreshOverview.setFocusPainted(false);
         btnRefreshOverview.addActionListener(e -> loadStudentsOverview());
 
-        JPanel overviewBtnPanel = new JPanel();
-        overviewBtnPanel.setBackground(Color.WHITE);
-        overviewBtnPanel.add(btnRefreshOverview);
-
+        JPanel overviewPanel = new JPanel(new BorderLayout());
+        overviewPanel.setBackground(new Color(245, 247, 250));
         overviewPanel.add(new JScrollPane(overviewTable), BorderLayout.CENTER);
-        overviewPanel.add(overviewBtnPanel, BorderLayout.SOUTH);
-
+        overviewPanel.add(btnRefreshOverview, BorderLayout.SOUTH);
         tabs.add("Students Overview", overviewPanel);
 
         add(tabs, BorderLayout.CENTER);
 
-        // Load initial data
+        // ================= LOGOUT BUTTON AT BOTTOM-RIGHT =================
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 5));
+        bottomPanel.setBackground(new Color(245, 247, 250));
+
+        JButton btnLogoutBottom = new JButton("Logout");
+        btnLogoutBottom.setBackground(new Color(200, 55, 55)); // Red
+        btnLogoutBottom.setForeground(Color.WHITE);
+        btnLogoutBottom.setFocusPainted(false);
+        btnLogoutBottom.setPreferredSize(new Dimension(100, 35)); // smaller size
+        btnLogoutBottom.addActionListener(e -> logout());
+
+        bottomPanel.add(btnLogoutBottom);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        // ================= LOAD DATA =================
         loadStudents();
         loadStudentsOverview();
     }
 
-    // ---------------- LEFT BUTTON PANEL ----------------
+    // ================= LEFT PANEL FOR STUDENTS =================
     private JPanel createLeftActionPanel() {
-        JPanel left = new JPanel();
-        left.setLayout(new GridLayout(6, 1, 10, 15));
-        left.setBackground(Color.WHITE);
-        left.setBorder(BorderFactory.createEmptyBorder(20, 15, 20, 15));
+        JPanel left = new JPanel(new GridLayout(7,1,10,10));
+        left.setBackground(new Color(230, 233, 240));
+        left.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
-        JButton btnAdd = createBtn("Add Student");
-        JButton btnEdit = createBtn("Edit Student");
-        JButton btnDelete = createBtn("Delete Student");
-        JButton btnAttendance = createBtn("Mark Attendance");
-        JButton btnGrade = createBtn("Assign Grade");
-        JButton btnRefresh = createBtn("Refresh");
+        JButton btnAdd = new JButton("Add Student");
+        JButton btnEdit = new JButton("Edit Student");
+        JButton btnDelete = new JButton("Delete Student");
+        JButton btnAttendance = new JButton("Mark Attendance");
+        JButton btnGrade = new JButton("Assign Grade");
+        JButton btnEnroll = new JButton("Enroll Student");
+        JButton btnRefresh = new JButton("Refresh");
+
+        JButton[] buttons = {btnAdd, btnEdit, btnDelete, btnAttendance, btnGrade, btnEnroll, btnRefresh};
+        for (JButton btn : buttons) {
+            btn.setFocusPainted(false); // Keep default OS button color
+        }
 
         btnAdd.addActionListener(e -> addStudent());
-        btnEdit.addActionListener(e -> editStudent());
-        btnDelete.addActionListener(e -> deleteStudent());
-        btnAttendance.addActionListener(e -> markAttendance());
-        btnGrade.addActionListener(e -> assignGrade());
+        btnEdit.addActionListener(e -> { if (studentTable.getSelectedRow() < 0) { showWarning(); return; } editStudent(); });
+        btnDelete.addActionListener(e -> { if (studentTable.getSelectedRow() < 0) { showWarning(); return; } deleteStudent(); });
+        btnAttendance.addActionListener(e -> { if (studentTable.getSelectedRow() < 0) { showWarning(); return; } markAttendance(); });
+        btnGrade.addActionListener(e -> { if (studentTable.getSelectedRow() < 0) { showWarning(); return; } assignGrade(); });
+        btnEnroll.addActionListener(e -> { if (studentTable.getSelectedRow() < 0) { showWarning(); return; } enrollStudent(); });
         btnRefresh.addActionListener(e -> loadStudents());
 
         left.add(btnAdd);
@@ -132,249 +133,194 @@ public class AdminDashboard extends JFrame {
         left.add(btnDelete);
         left.add(btnAttendance);
         left.add(btnGrade);
+        left.add(btnEnroll);
         left.add(btnRefresh);
 
         return left;
     }
 
-    private JButton createBtn(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Arial", Font.BOLD, 14));
-        btn.setForeground(Color.BLACK);
-        return btn;
+    private void showWarning() {
+        JOptionPane.showMessageDialog(this,"Please select a student first!","Warning",JOptionPane.WARNING_MESSAGE);
     }
 
-    // ---------------- LOGOUT ----------------
-    private void logout() {
-        int confirm = JOptionPane.showConfirmDialog(
-                this,
-                "Are you sure you want to logout?",
-                "Logout",
-                JOptionPane.YES_NO_OPTION
-        );
-        if (confirm == JOptionPane.YES_OPTION) {
-            this.dispose();
-            new LoginFrame().setVisible(true);
-        }
-    }
-
-    // ---------------- STUDENT CRUD ----------------
+    // ================= STUDENTS =================
     private void loadStudents() {
         studentModel.setRowCount(0);
-        List<Student> list = StudentDAO.getAll();
-
-        for (Student s : list) {
-            String courseName = "-";
-            if (s.getCourseId() != null) {
-                Course c = CourseDAO.getById(s.getCourseId());
-                if (c != null) courseName = c.getName();
-            }
+        for (Student s : StudentDAO.getAll()) {
+            Course c = CourseDAO.getById(s.getCourseId());
             studentModel.addRow(new Object[]{
                     s.getId(),
                     s.getName(),
                     s.getEmail(),
-                    courseName,
+                    c != null ? c.getName() : "-",
                     s.getFeesDue()
             });
         }
     }
 
     private void addStudent() {
-        JTextField txtName = new JTextField();
-        JTextField txtEmail = new JTextField();
-        JTextField txtFee = new JTextField();
-        JPasswordField txtPassword = new JPasswordField();
+    JTextField name = new JTextField();
+    JTextField email = new JTextField();
+    JTextField fee = new JTextField();
+    JPasswordField pass = new JPasswordField();
 
-        List<Course> courses = CourseDAO.getAllCourses();
-        JComboBox<String> comboCourse = new JComboBox<>();
-        for (Course c : courses) comboCourse.addItem(c.getId() + " - " + c.getName());
+    JComboBox<String> cbCourse = new JComboBox<>();
+    for (Course c : CourseDAO.getAllCourses())
+        cbCourse.addItem(c.getId() + " - " + c.getName());
 
-        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
-        panel.add(new JLabel("Name:")); panel.add(txtName);
-        panel.add(new JLabel("Email:")); panel.add(txtEmail);
-        panel.add(new JLabel("Course:")); panel.add(comboCourse);
-        panel.add(new JLabel("Fees Due:")); panel.add(txtFee);
-        panel.add(new JLabel("Password:")); panel.add(txtPassword);
+    JPanel p = new JPanel(new GridLayout(0,2,5,5));
+    p.add(new JLabel("Name")); p.add(name);
+    p.add(new JLabel("Email")); p.add(email);
+    p.add(new JLabel("Course")); p.add(cbCourse);
+    p.add(new JLabel("Fees")); p.add(fee);
+    p.add(new JLabel("Password")); p.add(pass);
 
-        int result = JOptionPane.showConfirmDialog(this, panel,
-                "Add New Student", JOptionPane.OK_CANCEL_OPTION);
+    int result = JOptionPane.showConfirmDialog(this, p, "Add Student", JOptionPane.OK_CANCEL_OPTION);
+    if (result == JOptionPane.OK_OPTION) {
+        // ===== VALIDATE FEE =====
+        double feeValue;
+        try {
+            feeValue = Double.parseDouble(fee.getText().trim());
+            if (feeValue < 0) throw new NumberFormatException("Negative value");
+            // Round to 2 decimals
+            feeValue = Math.round(feeValue * 100.0) / 100.0;
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Enter a valid numeric value for Fees (e.g., 5000.00)", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        if (result == JOptionPane.OK_OPTION) {
-            try {
-                Student s = new Student();
-                s.setName(txtName.getText().trim());
-                s.setEmail(txtEmail.getText().trim());
-                s.setPassword(new String(txtPassword.getPassword()));
-                s.setCourseId(Integer.parseInt(comboCourse.getSelectedItem().toString().split(" - ")[0]));
-                s.setFeesDue(Double.parseDouble(txtFee.getText()));
+        // ===== CREATE STUDENT OBJECT =====
+        Student s = new Student();
+        s.setName(name.getText().trim());
+        s.setEmail(email.getText().trim());
+        s.setPassword(new String(pass.getPassword()));
+        s.setCourseId(Integer.parseInt(cbCourse.getSelectedItem().toString().split(" - ")[0]));
+        s.setFeesDue(feeValue);
 
-                if (StudentDAO.addStudent(s)) {
-                    JOptionPane.showMessageDialog(this, "Student Added Successfully!");
-                    loadStudents();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Error adding student.");
-                }
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Invalid input!");
-            }
+        // ===== ADD STUDENT TO DATABASE =====
+        boolean success = StudentDAO.addStudent(s); // Make sure your DAO uses table `student`
+        if (success) {
+            loadStudents();
+            JOptionPane.showMessageDialog(this, "Student added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to add student. Check database connection.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+}
+
 
     private void editStudent() {
-        int row = studentTable.getSelectedRow();
-        if (row < 0) { JOptionPane.showMessageDialog(this, "Select a student first!"); return; }
+        int r = studentTable.getSelectedRow();
+        int id = (int) studentModel.getValueAt(r,0);
+        Student s = StudentDAO.getById(id);
 
-        int studentId = (int) studentModel.getValueAt(row, 0);
-        Student s = StudentDAO.getById(studentId);
-        if (s == null) return;
+        JTextField name = new JTextField(s.getName());
+        JTextField email = new JTextField(s.getEmail());
+        JTextField fee = new JTextField(String.valueOf(s.getFeesDue()));
 
-        JTextField txtName = new JTextField(s.getName());
-        JTextField txtEmail = new JTextField(s.getEmail());
-        JTextField txtFee = new JTextField(String.valueOf(s.getFeesDue()));
+        JPanel p = new JPanel(new GridLayout(0,2));
+        p.add(new JLabel("Name")); p.add(name);
+        p.add(new JLabel("Email")); p.add(email);
+        p.add(new JLabel("Fees")); p.add(fee);
 
-        List<Course> courses = CourseDAO.getAllCourses();
-        JComboBox<String> comboCourse = new JComboBox<>();
-        for (Course c : courses) {
-            comboCourse.addItem(c.getId() + " - " + c.getName());
-            if (c.getId() == s.getCourseId()) comboCourse.setSelectedItem(c.getId() + " - " + c.getName());
-        }
+        if (JOptionPane.showConfirmDialog(this,p,"Edit Student",
+                JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION) {
 
-        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
-        panel.add(new JLabel("Name:")); panel.add(txtName);
-        panel.add(new JLabel("Email:")); panel.add(txtEmail);
-        panel.add(new JLabel("Course:")); panel.add(comboCourse);
-        panel.add(new JLabel("Fees Due:")); panel.add(txtFee);
-
-        int result = JOptionPane.showConfirmDialog(this, panel,
-                "Edit Student", JOptionPane.OK_CANCEL_OPTION);
-
-        if (result == JOptionPane.OK_OPTION) {
-            try {
-                s.setName(txtName.getText().trim());
-                s.setEmail(txtEmail.getText().trim());
-                s.setCourseId(Integer.parseInt(comboCourse.getSelectedItem().toString().split(" - ")[0]));
-                s.setFeesDue(Double.parseDouble(txtFee.getText()));
-
-                if (StudentDAO.updateStudent(s)) {
-                    JOptionPane.showMessageDialog(this, "Student Updated!");
-                    loadStudents();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Failed to update student.");
-                }
-            } catch (Exception e) { JOptionPane.showMessageDialog(this, "Invalid input!"); }
+            s.setName(name.getText());
+            s.setEmail(email.getText());
+            s.setFeesDue(Double.parseDouble(fee.getText()));
+            StudentDAO.updateStudent(s);
+            loadStudents();
+            JOptionPane.showMessageDialog(this,"Student edited successfully!","Success",JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    private void deleteStudent() {
-        int row = studentTable.getSelectedRow();
-        if (row < 0) { JOptionPane.showMessageDialog(this, "Select a student first!"); return; }
+   private void deleteStudent() {
+        int r = studentTable.getSelectedRow();
+        if (r < 0) { showWarning(); return; }
 
-        int studentId = (int) studentModel.getValueAt(row, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Delete this student?", "Confirm", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            if (StudentDAO.deleteStudent(studentId)) {
-                JOptionPane.showMessageDialog(this, "Deleted successfully.");
-                loadStudents();
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to delete.");
-            }
+        int id = (int) studentModel.getValueAt(r,0);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete this student?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try (Connection con = DBConnection.getConnection();
+             Statement st = con.createStatement()) {
+
+            st.execute("SET FOREIGN_KEY_CHECKS=0"); // Disable foreign key temporarily
+            st.executeUpdate("DELETE FROM student WHERE id=" + id);
+            st.execute("SET FOREIGN_KEY_CHECKS=1"); // Re-enable foreign key
+
+            JOptionPane.showMessageDialog(this,"Student deleted successfully!","Success",JOptionPane.INFORMATION_MESSAGE);
+            loadStudents();
+            loadStudentsOverview();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,"Error deleting student: " + ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 
-    // ---------------- ATTENDANCE ----------------
+
+
+
+
+    // ================= ATTENDANCE =================
     private void markAttendance() {
-        int row = studentTable.getSelectedRow();
-        if (row < 0) { JOptionPane.showMessageDialog(this, "Select a student!"); return; }
-        int studentId = (int) studentModel.getValueAt(row, 0);
+        int r = studentTable.getSelectedRow();
+        int studentId = (int) studentModel.getValueAt(r,0);
 
-        List<Course> courses = CourseDAO.getAllCourses();
-        String[] courseNames = courses.stream().map(Course::getName).toArray(String[]::new);
-
-        String courseName = (String) JOptionPane.showInputDialog(this, "Select course:", "Attendance",
-                JOptionPane.QUESTION_MESSAGE, null, courseNames, courseNames[0]);
-        if (courseName == null) return;
-
-        Course selectedCourse = courses.stream().filter(c -> c.getName().equals(courseName)).findFirst().orElse(null);
-        if (selectedCourse == null) return;
-
-        String[] statusOptions = {"Present", "Absent"};
-        String status = (String) JOptionPane.showInputDialog(this, "Select status:", "Attendance",
-                JOptionPane.QUESTION_MESSAGE, null, statusOptions, statusOptions[0]);
-        if (status == null) return;
+        String[] options = {"Present","Absent"};
+        String status = (String) JOptionPane.showInputDialog(
+                this,"Status","Attendance",
+                JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
 
         Attendance a = new Attendance();
         a.setStudentId(studentId);
-        a.setCourseId(selectedCourse.getId());
+        a.setCourseId(StudentDAO.getById(studentId).getCourseId());
         a.setDate(new Date(System.currentTimeMillis()));
         a.setStatus(status);
 
-        if (AttendanceDAO.addAttendance(a)) {
-            JOptionPane.showMessageDialog(this, "Attendance recorded!");
-            loadStudentsOverview();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to record attendance.");
-        }
+        AttendanceDAO.addAttendance(a);
+        loadStudentsOverview();
+        JOptionPane.showMessageDialog(this,"Attendance marked successfully!","Success",JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ---------------- GRADES ----------------
+    // ================= GRADES =================
     private void assignGrade() {
-        int row = studentTable.getSelectedRow();
-        if (row < 0) { JOptionPane.showMessageDialog(this, "Select a student!"); return; }
-        int studentId = (int) studentModel.getValueAt(row, 0);
+        int r = studentTable.getSelectedRow();
+        int studentId = (int) studentModel.getValueAt(r,0);
+        String grade = JOptionPane.showInputDialog("Enter Grade");
 
-        List<Course> courses = CourseDAO.getAllCourses();
-        String[] courseNames = courses.stream().map(Course::getName).toArray(String[]::new);
+        Grade g = new Grade();
+        g.setStudentId(studentId);
+        g.setCourseId(StudentDAO.getById(studentId).getCourseId());
+        g.setGrade(grade);
 
-        String courseName = (String) JOptionPane.showInputDialog(this, "Select course:", "Assign Grade",
-                JOptionPane.QUESTION_MESSAGE, null, courseNames, courseNames[0]);
-        if (courseName == null) return;
-
-        Course selectedCourse = courses.stream().filter(c -> c.getName().equals(courseName)).findFirst().orElse(null);
-        if (selectedCourse == null) return;
-
-        String gradeValue = JOptionPane.showInputDialog(this, "Enter Grade (A, B, C, etc.):");
-        if (gradeValue == null || gradeValue.trim().isEmpty()) return;
-
-        Grade grade = GradesDAO.getByStudentCourse(studentId, selectedCourse.getId());
-        if (grade == null) grade = new Grade();
-
-        grade.setStudentId(studentId);
-        grade.setCourseId(selectedCourse.getId());
-        grade.setGrade(gradeValue.trim());
-
-        if (grade.getId() == 0) {
-            if (GradesDAO.addGrade(grade)) JOptionPane.showMessageDialog(this, "Grade added successfully!");
-            else JOptionPane.showMessageDialog(this, "Failed to add grade.");
-        } else {
-            if (GradesDAO.updateGrade(grade)) JOptionPane.showMessageDialog(this, "Grade updated successfully!");
-            else JOptionPane.showMessageDialog(this, "Failed to update grade.");
-        }
+        GradesDAO.addGrade(g);
+        JOptionPane.showMessageDialog(this,"Grade assigned successfully!","Success",JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // ---------------- STUDENTS OVERVIEW ----------------
+    // ================= OVERVIEW =================
     private void loadStudentsOverview() {
         overviewModel.setRowCount(0);
-        List<Student> students = StudentDAO.getAll();
 
-        for (Student s : students) {
-            List<Attendance> attendances = AttendanceDAO.getByStudent(s.getId());
-            String courseName = "-";
-            if (s.getCourseId() != null) {
-                Course c = CourseDAO.getById(s.getCourseId());
-                if (c != null) courseName = c.getName();
-            }
-
-            if (attendances.isEmpty()) {
+        for (Student s : StudentDAO.getAll()) {
+            List<Attendance> list = AttendanceDAO.getByStudent(s.getId());
+            if (list.isEmpty()) {
                 overviewModel.addRow(new Object[]{
                         s.getId(), s.getName(), s.getEmail(),
-                        courseName, s.getFeesDue(), "-", "-"
+                        "-", s.getFeesDue(), "-", "-"
                 });
             } else {
-                for (Attendance a : attendances) {
-                    Course c = CourseDAO.getById(a.getCourseId());
+                for (Attendance a : list) {
                     overviewModel.addRow(new Object[]{
                             s.getId(), s.getName(), s.getEmail(),
-                            c != null ? c.getName() : courseName,
+                            CourseDAO.getById(a.getCourseId()).getName(),
                             s.getFeesDue(), a.getDate(), a.getStatus()
                     });
                 }
@@ -382,7 +328,35 @@ public class AdminDashboard extends JFrame {
         }
     }
 
+    // ================= ENROLLMENT =================
+    private void enrollStudent() {
+        int r = studentTable.getSelectedRow();
+        int studentId = (int) studentModel.getValueAt(r,0);
+
+        JComboBox<String> cbCourse = new JComboBox<>();
+        for (Course c : CourseDAO.getAllCourses())
+            cbCourse.addItem(c.getId() + " - " + c.getName());
+
+        JPanel p = new JPanel(new GridLayout(0,2));
+        p.add(new JLabel("Course")); p.add(cbCourse);
+
+        if (JOptionPane.showConfirmDialog(this,p,"Enroll Student",
+                JOptionPane.OK_CANCEL_OPTION)==JOptionPane.OK_OPTION) {
+
+            int cid = Integer.parseInt(cbCourse.getSelectedItem().toString().split(" - ")[0]);
+            EnrollmentDAO.enroll(studentId, cid);
+            JOptionPane.showMessageDialog(this,"Student enrolled successfully!","Success",JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    // ================= LOGOUT =================
+    private void logout() {
+        dispose();
+        new LoginFrame().setVisible(true);
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new AdminDashboard().setVisible(true));
     }
 }
+ 

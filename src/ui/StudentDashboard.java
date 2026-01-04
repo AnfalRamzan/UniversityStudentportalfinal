@@ -35,15 +35,13 @@ public class StudentDashboard extends JFrame {
 
         initTopPanel();
         initLeftPanel();
-        // Bottom panel removed
+        initBottomPanel();
 
         mainModel = new DefaultTableModel();
         tblMain = new JTable(mainModel);
         styleTable(tblMain);
         JScrollPane scrollPane = new JScrollPane(tblMain);
         add(scrollPane, BorderLayout.CENTER);
-
-        // Initially table is empty (no default data)
     }
 
     // ---------------- TOP PANEL ----------------
@@ -51,19 +49,23 @@ public class StudentDashboard extends JFrame {
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(Color.WHITE);
 
+        // ✅ LOGO
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("/images/riphah.png"));
+            Image img = icon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+            JLabel logo = new JLabel(new ImageIcon(img));
+            logo.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+            topPanel.add(logo, BorderLayout.WEST);
+        } catch (Exception e) {
+            System.out.println("Logo not found: " + e.getMessage());
+        }
+
         JLabel lblTitle = new JLabel("STUDENT DASHBOARD", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Arial", Font.BOLD, 22));
         lblTitle.setForeground(Color.BLACK);
         lblTitle.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JButton btnLogout = new JButton("Logout");
-        btnLogout.setFont(new Font("Arial", Font.BOLD, 14));
-        btnLogout.setForeground(Color.BLACK);
-        btnLogout.addActionListener(e -> logout());
-
         topPanel.add(lblTitle, BorderLayout.CENTER);
-        topPanel.add(btnLogout, BorderLayout.EAST);
-
         add(topPanel, BorderLayout.NORTH);
     }
 
@@ -88,7 +90,6 @@ public class StudentDashboard extends JFrame {
 
         add(leftPanel, BorderLayout.WEST);
 
-        // ---------------- BUTTON ACTIONS ----------------
         btnProfile.addActionListener(e -> showProfile());
         btnAttendance.addActionListener(e -> loadAttendance());
         btnGrades.addActionListener(e -> loadGrades());
@@ -96,15 +97,27 @@ public class StudentDashboard extends JFrame {
         btnUpload.addActionListener(e -> uploadAssignment());
     }
 
-  private JButton createBtn(String text) {
-    JButton btn = new JButton(text);
-    btn.setFont(new Font("Arial", Font.BOLD, 14));
-    btn.setForeground(Color.BLACK);  // Text color = Black
-    // Background color set nahi hai → default OS/theme color (usually light grey)
-    return btn;
-}
+    // ---------------- BOTTOM PANEL (LOGOUT) ----------------
+    private void initBottomPanel() {
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomPanel.setBackground(Color.WHITE);
 
+        JButton btnLogout = new JButton("Logout");
+        btnLogout.setFont(new Font("Arial", Font.BOLD, 14));
+        btnLogout.setForeground(Color.WHITE);
+        btnLogout.setBackground(Color.RED);
+        btnLogout.addActionListener(e -> logout());
 
+        bottomPanel.add(btnLogout);
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private JButton createBtn(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Arial", Font.BOLD, 14));
+        btn.setForeground(Color.BLACK);
+        return btn;
+    }
 
     private void styleTable(JTable table) {
         table.setFillsViewportHeight(true);
@@ -115,7 +128,7 @@ public class StudentDashboard extends JFrame {
 
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        for(int i = 0; i < table.getColumnCount(); i++) {
+        for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
     }
@@ -125,8 +138,8 @@ public class StudentDashboard extends JFrame {
         mainModel.setRowCount(0);
         mainModel.setColumnIdentifiers(new String[]{"Course ID", "Date", "Status"});
         List<Attendance> list = AttendanceDAO.getAttendanceByStudent(student.getId());
-        if(list != null) {
-            for(Attendance a : list) {
+        if (list != null) {
+            for (Attendance a : list) {
                 mainModel.addRow(new Object[]{a.getCourseId(), a.getDate(), a.getStatus()});
             }
         }
@@ -136,8 +149,8 @@ public class StudentDashboard extends JFrame {
         mainModel.setRowCount(0);
         mainModel.setColumnIdentifiers(new String[]{"Course ID", "Grade"});
         List<Grade> list = GradesDAO.getGradesByStudent(student.getId());
-        if(list != null) {
-            for(Grade g : list) {
+        if (list != null) {
+            for (Grade g : list) {
                 mainModel.addRow(new Object[]{g.getCourseId(), g.getGrade()});
             }
         }
@@ -147,9 +160,15 @@ public class StudentDashboard extends JFrame {
         mainModel.setRowCount(0);
         mainModel.setColumnIdentifiers(new String[]{"Course ID", "Title", "Submission Date", "Status", "File Path"});
         List<Assignment> list = AssignmentDAO.getAssignmentsByStudent(student.getId());
-        if(list != null) {
-            for(Assignment a : list) {
-                mainModel.addRow(new Object[]{a.getCourseId(), a.getTitle(), a.getSubmissionDate(), a.getStatus(), a.getFilePath()});
+        if (list != null) {
+            for (Assignment a : list) {
+                mainModel.addRow(new Object[]{
+                        a.getCourseId(),
+                        a.getTitle(),
+                        a.getSubmissionDate(),
+                        a.getStatus(),
+                        a.getFilePath()
+                });
             }
         }
     }
@@ -159,15 +178,15 @@ public class StudentDashboard extends JFrame {
         mainModel.setColumnIdentifiers(new String[]{"Field", "Value"});
         mainModel.addRow(new Object[]{"Name", student.getName()});
         mainModel.addRow(new Object[]{"Email", student.getEmail()});
-        mainModel.addRow(new Object[]{"Phone", student.getPhone()});
         mainModel.addRow(new Object[]{"Course ID", student.getCourseId()});
         mainModel.addRow(new Object[]{"Fees Paid", student.getFeesPaid()});
         mainModel.addRow(new Object[]{"Fees Due", student.getFeesDue()});
 
         List<Grade> list = GradesDAO.getGradesByStudent(student.getId());
         double totalPoints = 0;
-        if(list != null && !list.isEmpty()) {
-            for(Grade g : list) totalPoints += GradesDAO.gradeToPoint(g.getGrade());
+        if (list != null && !list.isEmpty()) {
+            for (Grade g : list)
+                totalPoints += GradesDAO.gradeToPoint(g.getGrade());
             double gpa = totalPoints / list.size();
             mainModel.addRow(new Object[]{"GPA", String.format("%.2f", gpa)});
             mainModel.addRow(new Object[]{"CGPA", String.format("%.2f", gpa)});
@@ -181,10 +200,10 @@ public class StudentDashboard extends JFrame {
     private void uploadAssignment() {
         JFileChooser fileChooser = new JFileChooser();
         int result = fileChooser.showOpenDialog(this);
-        if(result == JFileChooser.APPROVE_OPTION) {
+        if (result == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
             String title = JOptionPane.showInputDialog(this, "Enter Assignment Title:");
-            if(title != null && !title.trim().isEmpty()) {
+            if (title != null && !title.trim().isEmpty()) {
                 Assignment a = new Assignment();
                 a.setStudentId(student.getId());
                 a.setCourseId(student.getCourseId());
@@ -193,11 +212,11 @@ public class StudentDashboard extends JFrame {
                 a.setSubmissionDate(new Date(System.currentTimeMillis()));
                 a.setStatus("Pending");
 
-                if(AssignmentDAO.saveAssignment(a)) {
-                    JOptionPane.showMessageDialog(this,"Assignment uploaded successfully!");
+                if (AssignmentDAO.saveAssignment(a)) {
+                    JOptionPane.showMessageDialog(this, "Assignment uploaded successfully!");
                     loadAssignments();
                 } else {
-                    JOptionPane.showMessageDialog(this,"Failed to upload assignment.");
+                    JOptionPane.showMessageDialog(this, "Failed to upload assignment.");
                 }
             }
         }

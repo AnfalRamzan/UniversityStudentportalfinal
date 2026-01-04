@@ -55,4 +55,17 @@ public class AssignmentDAO {
         }
         return list;
     }
+    // Example: AssignmentDAO.java
+public static void deleteByStudentId(int studentId) {
+    try {
+        Connection con = DBConnection.getConnection();
+        PreparedStatement ps = con.prepareStatement("DELETE FROM attendance WHERE student_id=?");
+        ps.setInt(1, studentId);
+        ps.executeUpdate();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+
 }

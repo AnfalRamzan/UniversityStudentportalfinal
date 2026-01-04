@@ -115,4 +115,15 @@ public class GradesDAO {
             default: return 0.0;
         }
     }
+   public static void deleteByStudentId(int studentId) {
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement ps = con.prepareStatement("DELETE FROM grade WHERE student_id=?")) {
+        ps.setInt(1, studentId);
+        ps.executeUpdate();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+
 }
